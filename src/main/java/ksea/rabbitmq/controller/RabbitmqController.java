@@ -3,6 +3,7 @@ package ksea.rabbitmq.controller;
 
 import ksea.rabbitmq.model.Deptinfo;
 import ksea.rabbitmq.model.Userinfo;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -118,15 +119,38 @@ public class RabbitmqController {
             if (i % 2 == 0) {
                 Userinfo userinfo = new Userinfo("uid" + i, "jacky", "jacky_pwd");
 
-                rabbitTemplate.convertAndSend("userinfo.exchange", "userinfo.queue", userinfo);
+                //  rabbitTemplate.convertAndSend("userinfo.exchange", "userinfo.queue", userinfo);
+
+                // 指定消息投递的唯一id，该id在确认回调的时候获取的一致new CorrelationData(userinfo.getUid())
+                rabbitTemplate.convertAndSend("userinfo.exchange", "userinfo.queue", userinfo, new CorrelationData(userinfo.getUid()));
             } else {
                 Deptinfo deptinfo = new Deptinfo("deptid" + i, "开发部");
-                rabbitTemplate.convertAndSend("deptinfo.exchange", "deptinfo.queue", deptinfo);
+                //   rabbitTemplate.convertAndSend("deptinfo.exchange", "deptinfo.queue", deptinfo);
+
+                // 用于测试消息未能正确抵达到队列 触发ReturnCallback机制
+                rabbitTemplate.convertAndSend("deptinfo.exchange", "deptinfo.queue-111", deptinfo);
+
+                // 指定消息投递的唯一id，该id在确认回调的时候获取的一致 new CorrelationData(deptinfo.getDeptid())
+                // rabbitTemplate.convertAndSend("deptinfo.exchange", "deptinfo.queue-111", deptinfo, new CorrelationData(deptinfo.getDeptid()));
             }
         }
         return "成功发送信息";
 
     }
 
+
+    @GetMapping("sendUser")
+    public Object sendUser() {
+
+
+        for (int i = 1; i <= 10; i++) {
+
+            Userinfo userinfo = new Userinfo("uid" + i, "jacky", "jacky_pwd");
+            // 指定消息投递的唯一id，该id在确认回调的时候获取的一致new CorrelationData(userinfo.getUid())
+            rabbitTemplate.convertAndSend("userinfo.exchange", "userinfo.queue", userinfo, new CorrelationData(userinfo.getUid()));
+        }
+        return "成功发送信息";
+
+    }
 
 }
